@@ -1,0 +1,638 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <title>DREXVIA - Survival Horror 3D</title>
+  <link rel="stylesheet" href="style.css">
+  <!-- Load Local Three.js with fallback -->
+  <script src="three.min.js"></script>
+  <script>
+    if (typeof THREE === 'undefined') {
+      document.write('<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"><\/script>');
+    }
+  </script>
+</head>
+<body class="no-select">
+  <div id="game-container">
+    <canvas id="game-canvas"></canvas>
+
+    <!-- HORROR POST-PROCESSING OVERLAYS -->
+    <div id="vignette-overlay"></div>
+    <div id="grain-overlay"></div>
+    <div id="damage-flash"></div>
+    <div id="screamer-flash"></div>
+    <div id="low-health-vignette"></div>
+    <div id="fear-distortion"></div>
+    <div id="nvg-overlay" class="hidden"></div>
+    <div id="thermal-overlay" class="hidden"></div>
+    <div id="gasmask-overlay" class="hidden"></div>
+    <div id="lightning-flash"></div>
+    <div id="flashbang-overlay"></div>
+    <div id="bullet-time-overlay" class="hidden"></div>
+    <div id="drone-hud" class="hidden">
+      <div class="drone-crosshair"></div>
+      <div class="drone-scan-line"></div>
+      <div class="drone-telemetry">
+        <span>UAV-RECON [ACTIVE]</span>
+        <span id="drone-altitude">ALT: 14.5M</span>
+        <span id="drone-battery">BATTERY: 100%</span>
+        <span>TARGETS DETECTED: <span id="drone-targets-count">0</span></span>
+      </div>
+      <button id="btn-exit-drone" class="drone-exit-btn">EXIT DRONE [ESC / U]</button>
+    </div>
+
+    <!-- ACOUSTIC SONAR RADAR HUD (TOP LEFT) -->
+    <div id="sonar-radar">
+      <div class="radar-circle">
+        <div class="radar-sweep"></div>
+        <div class="radar-center-blip"></div>
+        <div id="radar-blips-container"></div>
+      </div>
+      <div class="radar-label">ACOUSTIC SONAR • 40M</div>
+    </div>
+
+    <!-- ACHIEVEMENT NOTIFICATION TOAST (TOP) -->
+    <div id="achievement-toast" class="hidden">
+      <div class="achieve-icon">🏆</div>
+      <div class="achieve-text">
+        <div class="achieve-header">ACHIEVEMENT UNLOCKED</div>
+        <div id="achieve-title">APEX PREDATOR</div>
+        <div id="achieve-desc">Neutralized The Bio-Goliath in Sub-Level 2 Bio-Dome.</div>
+      </div>
+    </div>
+
+    <!-- CROSSHAIR & HIT MARKER -->
+    <div id="crosshair-container">
+      <div class="crosshair-dot"></div>
+      <div class="crosshair-line top"></div>
+      <div class="crosshair-line bottom"></div>
+      <div class="crosshair-line left"></div>
+      <div class="crosshair-line right"></div>
+      <div id="hit-marker"></div>
+    </div>
+
+    <!-- BOSS HEALTH ENCOUNTER BAR (TOP CENTER) -->
+    <div id="boss-health-container" class="hidden">
+      <div class="boss-header-row">
+        <span class="boss-skull">💀</span>
+        <span id="boss-name">THE BIO-GOLIATH [TITAN APEX]</span>
+        <span id="boss-phase-badge" class="boss-badge">PHASE 1</span>
+      </div>
+      <div class="boss-bar-bg">
+        <div id="boss-bar-fill" class="boss-bar-fill"></div>
+      </div>
+    </div>
+
+    <!-- TACTICAL RADIO COMMS TRANSMISSION (TOP RIGHT) -->
+    <div id="radio-comms-box" class="hidden">
+      <div class="radio-header">
+        <span class="radio-signal-icon">📡</span>
+        <span id="radio-caller">VANGUARD-01 [CHOPPER PILOT]</span>
+        <span class="radio-freq">FREQ: 148.95 MHz</span>
+      </div>
+      <div class="radio-waveform">
+        <span class="wave-bar"></span><span class="wave-bar"></span><span class="wave-bar"></span>
+        <span class="wave-bar"></span><span class="wave-bar"></span><span class="wave-bar"></span>
+      </div>
+      <div id="radio-message">"Ground team, heavy bio-readings converging on your LZ. Hold the perimeter!"</div>
+    </div>
+
+    <!-- HUD OVERLAY -->
+    <div id="hud">
+      <!-- TOP STATUS BAR: Mission Objectives & Compass -->
+      <div id="top-bar">
+        <div id="compass-container">
+          <div id="compass-ribbon">
+            <span class="comp-point">N</span>
+            <span class="comp-deg">30</span>
+            <span class="comp-deg">60</span>
+            <span class="comp-point">E</span>
+            <span class="comp-deg">120</span>
+            <span class="comp-deg">150</span>
+            <span class="comp-point">S</span>
+            <span class="comp-deg">210</span>
+            <span class="comp-deg">240</span>
+            <span class="comp-point">W</span>
+            <span class="comp-deg">300</span>
+            <span class="comp-deg">330</span>
+          </div>
+          <div id="compass-needle"></div>
+        </div>
+
+        <div id="mission-card">
+          <div class="mission-header">
+            <span class="pulse-dot"></span>
+            <span id="mission-sector-tag" class="mission-tag">SECTOR 01 • OBJECTIVE</span>
+          </div>
+          <div id="mission-title">PROLOGUE: Signal in the Mist</div>
+          <div id="mission-desc">Locate the Emergency Power Generator at Station Omega-9 and restore facility power.</div>
+          <div class="mission-step">
+            <span id="mission-checkbox">[ ]</span>
+            <span id="mission-task">Find Generator Keycard & Diesel Fuel Canister</span>
+          </div>
+          <div id="extraction-timer-row" class="hidden">
+            <span class="timer-tag">EXTRACTION HELI ETA:</span>
+            <span id="extraction-timer-val">00:45</span>
+          </div>
+          <div id="horde-wave-row" class="hidden">
+            <span class="horde-tag">SURVIVAL WAVE:</span>
+            <span id="horde-wave-val">1 / 10</span>
+            <span class="horde-rem">REMAINING: <span id="horde-enemies-left">5</span></span>
+          </div>
+        </div>
+
+        <div id="time-weather">
+          <div id="clock-display">02:47 AM</div>
+          <div id="weather-badge">HEAVY FOG / RAIN</div>
+          <div id="sector-badge">ZONE: SECTOR 01</div>
+        </div>
+      </div>
+
+      <!-- SURVIVAL STATS PANEL (BOTTOM LEFT) -->
+      <div id="stats-panel">
+        <!-- Health Bar -->
+        <div class="stat-row">
+          <div class="stat-label">
+            <span class="stat-icon heart">♥</span>
+            <span>VITALS</span>
+            <span id="health-val" class="stat-numeric">100%</span>
+          </div>
+          <div class="stat-bar-bg">
+            <div id="health-bar" class="stat-bar-fill health"></div>
+          </div>
+        </div>
+
+        <!-- Stamina Bar -->
+        <div class="stat-row">
+          <div class="stat-label">
+            <span class="stat-icon">⚡</span>
+            <span>STAMINA</span>
+            <span id="stamina-val" class="stat-numeric">100%</span>
+          </div>
+          <div class="stat-bar-bg">
+            <div id="stamina-bar" class="stat-bar-fill stamina"></div>
+          </div>
+        </div>
+
+        <!-- Fear, Infection, Hunger & Gas Filter -->
+        <div class="mini-stats-grid">
+          <div class="mini-stat">
+            <span class="mini-label">FILTER</span>
+            <div class="mini-bar-bg"><div id="filter-bar" class="mini-bar-fill filter"></div></div>
+          </div>
+          <div class="mini-stat">
+            <span class="mini-label">THIRST</span>
+            <div class="mini-bar-bg"><div id="thirst-bar" class="mini-bar-fill thirst"></div></div>
+          </div>
+          <div class="mini-stat">
+            <span class="mini-label">FEAR</span>
+            <div class="mini-bar-bg"><div id="fear-bar" class="mini-bar-fill fear"></div></div>
+          </div>
+          <div class="mini-stat">
+            <span class="mini-label">INFECTION</span>
+            <div class="mini-bar-bg"><div id="infection-bar" class="mini-bar-fill infection"></div></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- TACTICAL GEAR TOGGLE BAR (LEFT FLANK) -->
+      <div id="tactical-gear-bar">
+        <button id="btn-toggle-nvg" class="gear-btn" title="Toggle Night Vision [N]">
+          <span class="gear-icon">👁️</span>
+          <span class="gear-txt">NVG</span>
+        </button>
+        <button id="btn-toggle-thermal" class="gear-btn" title="Toggle Thermal FLIR [H]">
+          <span class="gear-icon">🔥</span>
+          <span class="gear-txt">FLIR</span>
+        </button>
+        <button id="btn-toggle-mask" class="gear-btn" title="Toggle Gas Mask [G]">
+          <span class="gear-icon">☣️</span>
+          <span class="gear-txt">MASK</span>
+        </button>
+        <button id="btn-trigger-emp" class="gear-btn" title="Detonate EMP Blast [Z]">
+          <span class="gear-icon">⚡</span>
+          <span class="gear-txt">EMP</span>
+        </button>
+        <button id="btn-deploy-drone" class="gear-btn" title="Deploy Recon UAV Drone [U]">
+          <span class="gear-icon">🛸</span>
+          <span class="gear-txt">DRONE</span>
+        </button>
+        <button id="btn-build-barricade" class="gear-btn" title="Fortify Steel Barricade [B]">
+          <span class="gear-icon">🚧</span>
+          <span class="gear-txt">FORTIFY</span>
+        </button>
+        <button id="btn-call-airdrop" class="gear-btn" title="Call Supply Airdrop Beacon [K]">
+          <span class="gear-icon">📦</span>
+          <span class="gear-txt">AIRDROP</span>
+        </button>
+        <button id="btn-throw-flashbang" class="gear-btn" title="Throw Flashbang Stun [J]">
+          <span class="gear-icon">✨</span>
+          <span class="gear-txt">FLASH</span>
+        </button>
+        <button id="btn-deploy-sentry" class="gear-btn" title="Deploy Auto-Turret [X]">
+          <span class="gear-icon">🛡️</span>
+          <span class="gear-txt">TURRET</span>
+        </button>
+        <button id="btn-toggle-suppressor" class="gear-btn" title="Attach Silencer [T]">
+          <span class="gear-icon">🔇</span>
+          <span class="gear-txt">SILENCER</span>
+        </button>
+        <button id="btn-melee-strike" class="gear-btn" title="Combat Knife Melee [V]">
+          <span class="gear-icon">🔪</span>
+          <span class="gear-txt">MELEE</span>
+        </button>
+        <button id="btn-open-cctv" class="gear-btn" title="CCTV Terminal [C]">
+          <span class="gear-icon">📹</span>
+          <span class="gear-txt">CCTV</span>
+        </button>
+      </div>
+
+      <!-- BIO-ENHANCEMENT SERUM SYRINGE DOCK -->
+      <div id="syringe-bar">
+        <button id="btn-serum-reflex" class="serum-btn" title="Focus Reflex Bullet-Time [7]">
+          <span class="serum-ic">💉</span>
+          <span class="serum-name">REFLEX</span>
+          <span id="serum-reflex-count" class="serum-qty">1</span>
+        </button>
+        <button id="btn-serum-armor" class="serum-btn" title="Iron-Skin Armor Serum [8]">
+          <span class="serum-ic">🧪</span>
+          <span class="serum-name">ARMOR</span>
+          <span id="serum-armor-count" class="serum-qty">1</span>
+        </button>
+        <button id="btn-serum-stim" class="serum-btn" title="Neuro-Stimulant [9]">
+          <span class="serum-ic">⚡</span>
+          <span class="serum-name">STIM</span>
+          <span id="serum-stim-count" class="serum-qty">2</span>
+        </button>
+      </div>
+
+      <!-- QUICK WEAPON SELECTOR DOCK (CENTER-BOTTOM) -->
+      <div id="quick-weapon-bar">
+        <button id="quick-wep-1" class="quick-wep-btn active" data-wep="pistol">
+          <span class="wep-num">1</span>
+          <span class="wep-ic">🔫</span>
+          <span class="wep-txt">M9 PISTOL</span>
+        </button>
+        <button id="quick-wep-2" class="quick-wep-btn" data-wep="shotgun">
+          <span class="wep-num">2</span>
+          <span class="wep-ic">💥</span>
+          <span class="wep-txt">R-870 SHOTGUN</span>
+        </button>
+        <button id="quick-wep-3" class="quick-wep-btn" data-wep="rifle">
+          <span class="wep-num">3</span>
+          <span class="wep-ic">🎯</span>
+          <span class="wep-txt">AK-47 RIFLE</span>
+        </button>
+        <button id="quick-wep-4" class="quick-wep-btn" data-wep="mine">
+          <span class="wep-num">4</span>
+          <span class="wep-ic">💣</span>
+          <span class="wep-txt">PROX MINE</span>
+        </button>
+        <button id="quick-wep-5" class="quick-wep-btn" data-wep="flamer">
+          <span class="wep-num">5</span>
+          <span class="wep-ic">🔥</span>
+          <span class="wep-txt">PYRE-X FLAMER</span>
+        </button>
+      </div>
+
+      <!-- WEAPON & AMMO PANEL (BOTTOM RIGHT) -->
+      <div id="weapon-panel">
+        <div class="weapon-info">
+          <div id="weapon-name">M9 TACTICAL 9MM</div>
+          <div class="ammo-display">
+            <span id="ammo-clip">15</span>
+            <span class="ammo-separator">/</span>
+            <span id="ammo-reserve">45</span>
+          </div>
+        </div>
+        <div class="weapon-status-row">
+          <div id="flashlight-status" class="status-pill active">
+            <span>🔦 FLASHLIGHT</span>
+            <span id="battery-val">92%</span>
+          </div>
+          <div id="firemode-status" class="status-pill">SEMI</div>
+          <div id="suppressor-status" class="status-pill">LOUD</div>
+        </div>
+      </div>
+
+      <!-- INTERACTION PROMPT (CENTER SCREEN) -->
+      <div id="interaction-prompt" class="hidden">
+        <div class="key-badge">E</div>
+        <div id="prompt-text">INTERACT WITH OBJECT</div>
+      </div>
+
+      <!-- COMBAT LOG / RADIO NOTIFICATIONS -->
+      <div id="combat-log"></div>
+    </div>
+
+    <!-- TOUCH CONTROLS (ON-SCREEN JOYSTICKS & BUTTONS FOR MOBILE) -->
+    <div id="touch-controls">
+      <!-- Left Movement Virtual Joystick Zone -->
+      <div id="joystick-left-zone">
+        <div id="joystick-left-base">
+          <div id="joystick-left-knob"></div>
+        </div>
+      </div>
+
+      <!-- Right Aim / Look Virtual Zone -->
+      <div id="touch-look-zone"></div>
+
+      <!-- Action Floating Buttons -->
+      <div id="touch-action-buttons">
+        <!-- Fire Button -->
+        <button id="btn-touch-fire" class="touch-btn primary fire-btn">
+          <span class="touch-btn-icon">💥</span>
+          <span class="touch-btn-label">FIRE</span>
+        </button>
+
+        <!-- Aim Down Sights Button -->
+        <button id="btn-touch-aim" class="touch-btn secondary aim-btn">
+          <span class="touch-btn-icon">🎯</span>
+          <span class="touch-btn-label">AIM</span>
+        </button>
+
+        <!-- Reload Button -->
+        <button id="btn-touch-reload" class="touch-btn circle-btn reload-btn">
+          <span class="touch-btn-icon">🔄</span>
+          <span class="touch-btn-label">RELOAD</span>
+        </button>
+
+        <!-- Interact / Loot Button -->
+        <button id="btn-touch-interact" class="touch-btn circle-btn interact-btn">
+          <span class="touch-btn-icon">🖐️</span>
+          <span class="touch-btn-label">USE</span>
+        </button>
+
+        <!-- Flashlight Button -->
+        <button id="btn-touch-light" class="touch-btn circle-btn light-btn">
+          <span class="touch-btn-icon">🔦</span>
+          <span class="touch-btn-label">LIGHT</span>
+        </button>
+
+        <!-- Sprint Button -->
+        <button id="btn-touch-sprint" class="touch-btn circle-btn sprint-btn">
+          <span class="touch-btn-icon">⚡</span>
+          <span class="touch-btn-label">SPRINT</span>
+        </button>
+
+        <!-- Crouch Button -->
+        <button id="btn-touch-crouch" class="touch-btn circle-btn crouch-btn">
+          <span class="touch-btn-icon">🛡️</span>
+          <span class="touch-btn-label">CROUCH</span>
+        </button>
+
+        <!-- Inventory Backpack Button -->
+        <button id="btn-touch-inv" class="touch-btn circle-btn inv-btn">
+          <span class="touch-btn-icon">🎒</span>
+          <span class="touch-btn-label">BAG</span>
+        </button>
+
+        <!-- Pause / Settings Button -->
+        <button id="btn-touch-pause" class="touch-btn circle-btn pause-btn">
+          <span class="touch-btn-icon">⚙️</span>
+        </button>
+      </div>
+    </div>
+
+    <!-- INVENTORY & CRAFTING MODAL OVERLAY -->
+    <div id="inventory-modal" class="game-modal hidden">
+      <div class="modal-card">
+        <div class="modal-header">
+          <div class="modal-tabs">
+            <button id="tab-btn-inv" class="modal-tab-btn active">🎒 BACKPACK (<span id="inv-count">6</span>/16)</button>
+            <button id="tab-btn-craft" class="modal-tab-btn">🛠 FIELD CRAFTING</button>
+          </div>
+          <button id="btn-close-inv" class="close-modal-btn">✕</button>
+        </div>
+        
+        <!-- Tab 1: Inventory View -->
+        <div id="inv-tab-content" class="modal-body">
+          <div class="inventory-grid" id="inventory-grid">
+            <!-- Populated dynamically by game.js -->
+          </div>
+          <div class="item-inspector" id="item-inspector">
+            <h3 id="inspect-title">SELECT AN ITEM</h3>
+            <div id="inspect-desc">Tap an inventory slot to examine specifications and tactical usage.</div>
+            <div class="inspect-actions">
+              <button id="btn-item-use" class="modal-action-btn primary" disabled>USE ITEM</button>
+              <button id="btn-item-drop" class="modal-action-btn secondary" disabled>DROP ITEM</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Tab 2: Crafting Workbench View -->
+        <div id="craft-tab-content" class="modal-body hidden">
+          <div class="crafting-recipes-list" id="crafting-recipes-list">
+            <!-- Populated dynamically by game.js -->
+          </div>
+          <div class="item-inspector" id="craft-inspector">
+            <h3 id="craft-inspect-title">FIELD WORKBENCH</h3>
+            <div id="craft-inspect-desc">Combine scavenged chemical compounds, electronic scrap, and sterile cloth to synthesize survival gear.</div>
+            <div id="craft-reqs" class="craft-reqs-box">
+              <div class="reqs-title">REQUIRED MATERIALS:</div>
+              <div id="craft-reqs-list">Select a recipe</div>
+            </div>
+            <div class="inspect-actions">
+              <button id="btn-craft-execute" class="modal-action-btn primary" disabled>CRAFT ITEM</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- CCTV SECURITY CAMERA MONITOR TERMINAL -->
+    <div id="cctv-modal" class="game-modal hidden">
+      <div class="modal-card cctv-card">
+        <div class="cctv-header">
+          <div class="cctv-live-tag"><span class="rec-dot"></span> LIVE CCTV SURVEILLANCE FEED</div>
+          <div id="cctv-cam-title">CAM 01: PERIMETER SECURITY GATE</div>
+          <button id="btn-close-cctv" class="close-modal-btn">✕</button>
+        </div>
+        <div class="cctv-screen-box">
+          <div class="cctv-scanlines"></div>
+          <div class="cctv-noise"></div>
+          <div id="cctv-cam-view" class="cctv-feed-display">
+            <div id="cctv-cam-text">CONNECTING SATELLITE OPTICS...</div>
+          </div>
+          <div class="cctv-meta-hud">
+            <span>REC [●] 00:24:18</span>
+            <span>IR NIGHT VISION: ACTIVE</span>
+            <span>SECTOR: OMEGA-9 BIOHAZARD</span>
+          </div>
+        </div>
+        <div class="cctv-cam-selector">
+          <button class="cctv-btn active" data-cam="1">CAM 01: GATE</button>
+          <button class="cctv-btn" data-cam="2">CAM 02: SUBSTATION</button>
+          <button class="cctv-btn" data-cam="3">CAM 03: MAINFRAME</button>
+          <button class="cctv-btn" data-cam="4">CAM 04: VAULT ALPHA</button>
+          <button class="cctv-btn" data-cam="5">CAM 05: HELIPAD</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- LORE DIARY / AUDIOLOG VIEWER -->
+    <div id="lore-modal" class="game-modal hidden">
+      <div class="modal-card lore-card">
+        <div class="modal-header">
+          <h2 id="lore-title">CLASSIFIED INCIDENT RECORD</h2>
+          <button id="btn-close-lore" class="close-modal-btn">✕</button>
+        </div>
+        <div class="modal-body lore-body">
+          <div id="lore-meta" class="lore-meta-text">STATION OMEGA-9 RESEARCH LOG #04</div>
+          <div id="lore-content" class="lore-text-content">...</div>
+          <div class="audiolog-playback-row">
+            <button id="btn-play-audiolog" class="audiolog-play-btn">▶ PLAY AUDIO RECONSTRUCTION</button>
+            <div class="audiolog-status" id="audiolog-status">READY FOR SYNTHESIS</div>
+          </div>
+          <button id="btn-lore-dismiss" class="modal-action-btn primary">CLOSE DATAPAD</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- MULTI-ENDING DECISION MODAL (CHAPTER 3 CLIMAX) -->
+    <div id="ending-decision-modal" class="game-modal hidden">
+      <div class="modal-card ending-card">
+        <h1 class="ending-choice-title">CRITICAL DECISION: THE VEIL CORE</h1>
+        <p class="ending-choice-subtitle">You stand before the Station Omega-9 Central Override Console. Choose humanity's fate.</p>
+        <div class="ending-choices-grid">
+          <button id="btn-ending-extract" class="ending-choice-btn extract">
+            <div class="choice-icon">🚁</div>
+            <div class="choice-title">ENDING A: EXTRACTION WITH CURE CORE</div>
+            <div class="choice-desc">Escape on Vanguard-01 with the virus synthesis cure. True Survivor Ending.</div>
+          </button>
+          <button id="btn-ending-destruct" class="ending-choice-btn destruct">
+            <div class="choice-icon">☢️</div>
+            <div class="choice-title">ENDING B: PROTOCOL OMEGA SELF-DESTRUCT</div>
+            <div class="choice-desc">Detonate the facility reactor to vaporize all biological horrors forever.</div>
+          </button>
+          <button id="btn-ending-lockdown" class="ending-choice-btn lockdown">
+            <div class="choice-icon">🔒</div>
+            <div class="choice-title">ENDING C: PERMANENT VAULT LOCKDOWN</div>
+            <div class="choice-desc">Seal yourself in Vault Alpha to contain the outbreak at all costs.</div>
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- GAME OVER / DEATH OVERLAY -->
+    <div id="death-overlay" class="game-modal hidden">
+      <div class="modal-card death-card">
+        <h1 class="death-title">CRITICAL FAILURE</h1>
+        <p class="death-subtitle">VITALS TERMINATED. YOU DID NOT SURVIVE DREXVIA.</p>
+        <div class="death-stats">
+          <div>Time Survived: <span id="death-time">02m 45s</span></div>
+          <div>Creatures Banished: <span id="death-kills">0</span></div>
+          <div>Missions Progress: <span id="death-mission">Prologue (Incomplete)</span></div>
+        </div>
+        <div class="modal-actions-row">
+          <button id="btn-respawn" class="modal-action-btn primary">RESPAWN AT DROP ZONE</button>
+          <button id="btn-death-menu" class="modal-action-btn secondary">RETURN TO MAIN MENU</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- MISSION COMPLETE / EXTRACTION OVERLAY -->
+    <div id="victory-overlay" class="game-modal hidden">
+      <div class="modal-card victory-card">
+        <h1 class="victory-title" id="victory-header-title">SECTOR SECURED</h1>
+        <p class="victory-subtitle" id="victory-header-subtitle">CHAPTER COMPLETED: EXTRACTION SUCCESSFUL</p>
+        <div class="death-stats">
+          <div>Final Score: <span id="victory-score" class="highlight-text">12,450 PTS</span></div>
+          <div>Creatures Eliminated: <span id="victory-kills" class="highlight-text">18</span></div>
+          <div>Story Ending Achieved: <span id="victory-ending-name" class="highlight-text">True Survivor [Cure Secured]</span></div>
+        </div>
+        <button id="btn-continue-game" class="modal-action-btn primary">CONTINUE IN ENDLESS HORDE SURVIVAL MODE</button>
+      </div>
+    </div>
+
+    <!-- CYBER HACKING / SECURITY MAINFRAME DECRYPTION MODAL -->
+    <div id="hack-modal" class="game-modal hidden">
+      <div class="modal-card hack-card">
+        <div class="modal-header">
+          <div class="hack-title-tag"><span>⚡</span> CYBER SECURITY OVERRIDE TERMINAL</div>
+          <button id="btn-close-hack" class="close-modal-btn">✕</button>
+        </div>
+        <div class="modal-body hack-body">
+          <p class="hack-instructions">Align the sub-frequency waveforms to bypass mainframe biometric security locks.</p>
+          <div class="hack-screen">
+            <div class="hack-signal-row">
+              <span class="hack-freq-label">CARRIER FREQ:</span>
+              <div class="hack-bar-bg"><div id="hack-target-bar" class="hack-bar-target"></div><div id="hack-user-bar" class="hack-bar-user"></div></div>
+            </div>
+            <div class="hack-nodes-grid" id="hack-nodes-container">
+              <!-- Dynamically populated by JS -->
+            </div>
+            <div class="hack-status-row">
+              <span>DECRYPTION PROGRESS: <span id="hack-progress-val">0%</span></span>
+              <span>TIME REMAINING: <span id="hack-timer-val">15s</span></span>
+            </div>
+          </div>
+          <div class="inspect-actions">
+            <button id="btn-hack-execute" class="modal-action-btn primary">OVERRIDE LOCKDOWN</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- OPERATIVE CLASS SPECIALIZATION MODAL -->
+    <div id="class-modal" class="game-modal hidden">
+      <div class="modal-card class-card">
+        <div class="modal-header">
+          <h2>OPERATIVE SPECIALIZATION LOADOUT</h2>
+          <button id="btn-close-class" class="close-modal-btn">✕</button>
+        </div>
+        <p class="class-modal-sub">Select your combat doctrine. Each class brings unique field survival advantages.</p>
+        <div class="class-grid">
+          <div class="class-option-card active" data-class="commando">
+            <div class="class-icon">🪖</div>
+            <div class="class-title">ASSAULT COMMANDO</div>
+            <div class="class-perk">+25% Ammo Reserves • -30% Weapon Recoil • Heavy Ballistic Armor</div>
+          </div>
+          <div class="class-option-card" data-class="infiltrator">
+            <div class="class-icon">🕶️</div>
+            <div class="class-title">RECON INFILTRATOR</div>
+            <div class="class-perk">Silent Sprinting • Pre-installed FLIR Thermal • +20% Movement Speed</div>
+          </div>
+          <div class="class-option-card" data-class="medic">
+            <div class="class-icon">💉</div>
+            <div class="class-title">BIO-MEDIC</div>
+            <div class="class-perk">Passive Health Regen • Double Serum Duration • Infection Immunity</div>
+          </div>
+          <div class="class-option-card" data-class="engineer">
+            <div class="class-icon">🔧</div>
+            <div class="class-title">COMBAT ENGINEER</div>
+            <div class="class-perk">2x Turret Ammo • Self-Repairing Barricades • +50% Mine Blast Radius</div>
+          </div>
+        </div>
+        <button id="btn-confirm-class" class="modal-action-btn primary">CONFIRM LOADOUT DOCTRINE</button>
+      </div>
+    </div>
+
+    <!-- PAUSE MENU -->
+    <div id="pause-modal" class="game-modal hidden">
+      <div class="modal-card pause-card">
+        <h2>DREXVIA - TACTICAL PAUSE</h2>
+        <p>Sector: Station Omega-9 Research Complex</p>
+        <div class="game-mode-toggle-row">
+          <button id="btn-mode-campaign" class="mode-toggle-btn active">STORY CAMPAIGN</button>
+          <button id="btn-mode-endless" class="mode-toggle-btn">ENDLESS HORDE ARENA</button>
+        </div>
+        <div class="pause-menu-list">
+          <button id="btn-resume-game" class="modal-action-btn primary">RESUME MISSION</button>
+          <button id="btn-select-class-pause" class="modal-action-btn secondary">CHANGE OPERATIVE CLASS</button>
+          <button id="btn-restart-game" class="modal-action-btn secondary">RESTART CURRENT CHECKPOINT</button>
+          <button id="btn-quit-menu" class="modal-action-btn danger">EXIT TO TITLE MENU</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- DESKTOP KEYBOARD CONTROLS HELPER -->
+    <div id="controls-hint">
+      WASD: Move | MOUSE: Aim | L-CLICK: Fire | R-CLICK: ADS | 1-5: Weapons | 7-9: Bio-Serums | F: Light | N: NVG | H: Thermal | G: Mask | Z: EMP | U: Drone | B: Barricade | K: Airdrop | J: Flashbang | X: Turret | T: Silencer | V: Melee | C: CCTV | TAB: Bag
+    </div>
+  </div>
+
+  <script src="game.js"></script>
+</body>
+</html>

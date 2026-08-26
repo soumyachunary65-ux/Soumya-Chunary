@@ -1,0 +1,26 @@
+{
+  "name": "drexvia-multiplayer-survival-horror",
+  "version": "2.0.0",
+  "description": "DREXVIA - 150-Player Multiplayer Survival Horror Engine by Soumya Chunary Studios",
+  "main": "server/src/index.js",
+  "scripts": {
+    "start": "node server/src/index.js",
+    "server": "node server/src/index.js",
+    "dev": "node server/src/index.js"
+  },
+  "dependencies": {
+    "express": "^4.19.2",
+    "ws": "^8.18.0"
+  },
+  "keywords": [
+    "survival-horror",
+    "multiplayer",
+    "threejs",
+    "webrtc-voice",
+    "ai-bots",
+    "150-players",
+    "drexvia"
+  ],
+  "author": "Soumya Chunary Studios",
+  "license": "MIT"
+}

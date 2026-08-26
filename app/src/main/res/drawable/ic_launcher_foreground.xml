@@ -1,0 +1,49 @@
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:aapt="http://schemas.android.com/aapt"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    
+    <!-- Outer Biohazard Tri-Wing Frame -->
+    <path
+        android:fillColor="#FF2A2A"
+        android:pathData="M54,24 L60,36 L66,35 L62,23 L54,20 L46,23 L42,35 L48,36 Z" />
+    <path
+        android:fillColor="#FF3333"
+        android:pathData="M30,68 L24,78 L32,84 L40,74 L37,66 L30,68 Z" />
+    <path
+        android:fillColor="#FF3333"
+        android:pathData="M78,68 L84,78 L76,84 L68,74 L71,66 L78,68 Z" />
+
+    <!-- Central Tactical Helmet / Combat Mask Silhouette -->
+    <path
+        android:fillColor="#E5E7EB"
+        android:pathData="M54,28 C42,28 35,36 34,48 C34,60 40,72 46,78 L46,82 C46,84 48,86 51,86 L57,86 C60,86 62,84 62,82 L62,78 C68,72 74,60 74,48 C73,36 66,28 54,28 Z" />
+
+    <!-- Dark Tactical Visor / Respirator Geometry -->
+    <path
+        android:fillColor="#111827"
+        android:pathData="M39,46 C41,44 48,43 54,43 C60,43 67,44 69,46 C70,51 68,56 65,58 C60,60 48,60 43,58 C40,56 38,51 39,46 Z" />
+
+    <!-- Glowing Crimson Sensor Eyes / Night-Vision Optics -->
+    <path
+        android:fillColor="#FF0033"
+        android:pathData="M43,48 A3.5,3.5 0 1,0 43,55 A3.5,3.5 0 1,0 43,48" />
+    <path
+        android:fillColor="#FF0033"
+        android:pathData="M65,48 A3.5,3.5 0 1,0 65,55 A3.5,3.5 0 1,0 65,48" />
+    <path
+        android:fillColor="#00E5FF"
+        android:pathData="M54,47 A2,2 0 1,0 54,51 A2,2 0 1,0 54,47" />
+
+    <!-- Gas Filter / Tactical Respirator Grille -->
+    <path
+        android:fillColor="#1F2937"
+        android:pathData="M48,66 L60,66 L58,74 L50,74 Z" />
+    <path
+        android:strokeColor="#FF3333"
+        android:strokeWidth="1.2"
+        android:pathData="M51,69 L57,69 M52,72 L56,72" />
+</vector>
+

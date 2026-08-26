@@ -1,0 +1,6 @@
+{
+  "name": "Drexvia",
+  "description": "DREXVIA: A survival horror adventure game featuring 3D exploration, creature AI, inventory management, dynamic lighting, tactical combat, and atmospheric audio.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

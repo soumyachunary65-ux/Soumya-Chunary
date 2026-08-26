@@ -1,0 +1,266 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>DREXVIA — Multiplayer Survival Horror</title>
+  <link rel="stylesheet" href="styles/style.css">
+  <script src="three.min.js"></script>
+  <script src="../shared/constants.js"></script>
+</head>
+<body>
+  <!-- 3D Canvas Viewport -->
+  <div id="canvas-container"></div>
+
+  <!-- Tactical Night / Thermal Overlays -->
+  <div id="nvg-overlay" class="hidden"></div>
+  <div id="thermal-overlay" class="hidden"></div>
+
+  <!-- MAIN MENU SCREEN -->
+  <div id="main-menu-screen" class="screen-layer">
+    <div class="menu-card">
+      <h1 class="game-title">DREXVIA</h1>
+      <div class="studio-subtitle">Soumya Chunary Studios</div>
+      <div class="genre-tags">SURVIVAL • HORROR • MULTIPLAYER • AI BOTS • 3D VOICE</div>
+
+      <input type="text" id="input-player-name" class="name-input" placeholder="OPERATIVE CALLSIGN" value="Operative_Vanguard" maxlength="20">
+
+      <!-- Operative Class Selection -->
+      <div class="class-select-container">
+        <div class="class-badge active" data-class="commando">COMMANDO</div>
+        <div class="class-badge" data-class="infiltrator">INFILTRATOR</div>
+        <div class="class-badge" data-class="medic">MEDIC</div>
+        <div class="class-badge" data-class="engineer">ENGINEER</div>
+      </div>
+
+      <button id="btn-play-multiplayer" class="menu-btn primary">150-PLAYER MATCHMAKING</button>
+      <button id="btn-play-solo" class="menu-btn">SOLO RECON MISSION</button>
+      <button id="btn-play-horde" class="menu-btn">ENDLESS HORDE MODE</button>
+      <button id="btn-menu-clans" class="menu-btn">GLOBAL CLAN LEADERBOARD</button>
+      <button id="btn-menu-field-guide" class="menu-btn">FIELD GUIDE & BESTIARY</button>
+      <button id="btn-menu-profile" class="menu-btn">OPERATIVE DOSSIER</button>
+      <button id="btn-menu-settings" class="menu-btn">SETTINGS & BINDS</button>
+    </div>
+  </div>
+
+  <!-- 150-PLAYER MATCHMAKING LOBBY SCREEN -->
+  <div id="matchmaking-screen" class="screen-layer hidden">
+    <div class="menu-card">
+      <h2 class="game-title" style="font-size: 2.2rem;">MATCHMAKING</h2>
+      <div class="studio-subtitle">CONNECTING TO DREXVIA SECTOR 01</div>
+
+      <div class="lobby-status-grid">
+        <div class="lobby-stat-box">
+          <div class="stat-label">REAL PLAYERS</div>
+          <div id="lobby-real-players" class="stat-val">1</div>
+        </div>
+        <div class="lobby-stat-box">
+          <div class="stat-label">AI BOTS FILL</div>
+          <div id="lobby-bots-count" class="stat-val">149</div>
+        </div>
+        <div class="lobby-stat-box">
+          <div class="stat-label">TOTAL PARTICIPANTS</div>
+          <div id="lobby-total-count" class="stat-val">150 / 150</div>
+        </div>
+        <div class="lobby-stat-box">
+          <div class="stat-label">DEPLOYMENT TIMER</div>
+          <div id="lobby-timer" class="stat-val timer-val">00:45</div>
+        </div>
+      </div>
+
+      <div style="font-size: 0.8rem; color: #94a3b8; margin-bottom: 20px;">
+        SERVER REGION: <span style="color: #38bdf8;">US-EAST (DREXVIA CLOUD)</span> | PING: <span id="lobby-ping" style="color: #10b981;">24 ms</span>
+      </div>
+
+      <button id="btn-cancel-queue" class="menu-btn">CANCEL MATCHMAKING</button>
+    </div>
+  </div>
+
+  <!-- IN-GAME HUD -->
+  <div id="game-hud" class="hidden">
+    <div class="crosshair"></div>
+
+    <!-- Squad HUD Top-Left -->
+    <div class="squad-panel" id="squad-list">
+      <div class="squad-member-item">
+        <span style="color: #10b981;">●</span>
+        <span>YOU (Vanguard)</span>
+        <span style="color: #94a3b8;">LEADER</span>
+      </div>
+    </div>
+
+    <!-- Sonar Acoustic Radar Top-Right -->
+    <div class="radar-container">
+      <div class="radar-sweep"></div>
+      <div id="radar-blips-container"></div>
+    </div>
+
+    <!-- Push-to-Talk Mic Indicator -->
+    <div id="voice-indicator">
+      <span>🎙️</span>
+      <span>VOICE: HOLD [V] TO TRANSMIT</span>
+    </div>
+
+    <!-- Player Health, Armor, Stamina -->
+    <div class="hud-bottom-left">
+      <div class="hud-bar-container">
+        <div id="player-hp-bar" class="hud-bar-fill hp-fill"></div>
+      </div>
+      <div class="hud-bar-container">
+        <div id="player-armor-bar" class="hud-bar-fill armor-fill"></div>
+      </div>
+      <div class="hud-bar-container">
+        <div id="player-stamina-bar" class="hud-bar-fill stamina-fill"></div>
+      </div>
+    </div>
+
+    <!-- Vehicle Tactical HUD (Appears when driving) -->
+    <div id="vehicle-hud" class="vehicle-hud-container hidden">
+      <div class="vehicle-gauge">
+        <div class="vehicle-title">TACTICAL ROVER / BUGGY</div>
+        <div class="speedometer"><span id="vehicle-speed-val">0</span> <small>KM/H</small></div>
+        <div class="vehicle-seat-status">DRIVER SEAT OCCUPIED • HIGH-BEAM ACTIVE</div>
+        <div class="vehicle-prompt">PRESS [E] TO DISMOUNT VEHICLE</div>
+      </div>
+    </div>
+
+    <!-- Horde Wave Banner -->
+    <div id="horde-hud" class="horde-banner-container hidden">
+      <div class="horde-wave-badge">HORDE SURVIVAL</div>
+      <div class="horde-wave-num">WAVE <span id="horde-wave-val">1</span></div>
+      <div class="horde-threat">MUTANTS REMAINING: <span id="horde-mobs-val">18</span></div>
+    </div>
+
+    <!-- Current Weapon & Munitions -->
+    <div class="hud-bottom-right">
+      <div id="hud-weapon-name" class="weapon-title">AK-47 HYBRID</div>
+      <div class="ammo-counter">
+        <span id="hud-clip-qty" style="color: #f8fafc;">30</span>
+        <span style="color: #64748b; font-size: 1.4rem;">/</span>
+        <span id="hud-reserve-qty" style="color: #94a3b8; font-size: 1.4rem;">120</span>
+      </div>
+      <div style="font-size: 0.75rem; color: #64748b; margin-top: 4px;">
+        1: PISTOL | 2: SHOTGUN | 3: RIFLE | 4: MINE | 5: FLAMER
+      </div>
+    </div>
+  </div>
+
+  <!-- MATCH RESULTS SCREEN -->
+  <div id="results-screen" class="screen-layer hidden">
+    <div class="menu-card">
+      <h1 id="res-placement" class="game-title" style="font-size: 2.5rem; color: #10b981;">#1 VICTORY</h1>
+      <div class="studio-subtitle">MISSION DEBRIEFING REPORT</div>
+
+      <div class="lobby-status-grid">
+        <div class="lobby-stat-box">
+          <div class="stat-label">OPERATIVE KILLS</div>
+          <div id="res-kills" class="stat-val">6</div>
+        </div>
+        <div class="lobby-stat-box">
+          <div class="stat-label">MUTANTS PURGED</div>
+          <div id="res-monster-kills" class="stat-val">14</div>
+        </div>
+        <div class="lobby-stat-box">
+          <div class="stat-label">EXP EARNED</div>
+          <div id="res-xp" class="stat-val">+850 XP</div>
+        </div>
+        <div class="lobby-stat-box">
+          <div class="stat-label">TIME SURVIVED</div>
+          <div id="res-time" class="stat-val">8m 42s</div>
+        </div>
+      </div>
+
+      <button id="btn-results-menu" class="menu-btn primary">RETURN TO COMMAND</button>
+    </div>
+  </div>
+
+  <!-- FIELD GUIDE MODAL -->
+  <div id="field-guide-modal" class="screen-layer hidden">
+    <div class="menu-card" style="max-width: 650px; text-align: left;">
+      <h2 style="color: #38bdf8; margin-bottom: 12px;">DREXVIA FIELD GUIDE & BESTIARY</h2>
+      <p style="font-size: 0.85rem; color: #94a3b8; margin-bottom: 16px;">Classified records retrieved from the Omega Science Mainframe incident.</p>
+      
+      <div style="max-height: 280px; overflow-y: auto; font-size: 0.85rem; line-height: 1.6; color: #cbd5e1;">
+        <p><strong>• The Hollow (Stage 1):</strong> Aggressive early-stage infected bio-hostiles. Swarms quickly in darkness.</p>
+        <p><strong>• Venomous Crawler:</strong> Vent-dwelling subterranean horrors with toxic secretions.</p>
+        <p><strong>• Quarantine Screamer:</strong> Bio-acoustic mutants whose vocal shrill triggers immediate horde reinforcements.</p>
+        <p><strong>• The Bio-Goliath:</strong> Heavily armored 4-meter apex titan with ground-shattering seismic slams.</p>
+        <p><strong>• The Veil:</strong> Optical-refracting predator capable of cloaking in ambient shadows.</p>
+      </div>
+
+      <button class="menu-btn" style="margin-top: 20px;" onclick="document.getElementById('field-guide-modal').classList.add('hidden')">CLOSE DOSSIER</button>
+    </div>
+  </div>
+
+  <!-- GLOBAL CLAN LEADERBOARDS MODAL -->
+  <div id="clan-modal" class="screen-layer hidden">
+    <div class="menu-card" style="max-width: 680px; text-align: left;">
+      <h2 style="color: #38bdf8; margin-bottom: 8px;">GLOBAL SQUAD & CLAN LEADERBOARD</h2>
+      <div style="font-size: 0.8rem; color: #94a3b8; margin-bottom: 16px;">Verified Endless Horde Wave records across global combat sectors.</div>
+
+      <div style="max-height: 280px; overflow-y: auto;">
+        <table class="clan-table" id="clan-table-body">
+          <thead>
+            <tr>
+              <th>RANK</th>
+              <th>CLAN</th>
+              <th>REGION</th>
+              <th>HIGHEST WAVE</th>
+              <th>MUTANTS SLAIN</th>
+              <th>REPUTATION</th>
+            </tr>
+          </thead>
+          <tbody>
+            <!-- Dynamic Clan Rows -->
+          </tbody>
+        </table>
+      </div>
+
+      <button class="menu-btn" style="margin-top: 20px;" onclick="document.getElementById('clan-modal').classList.add('hidden')">RETURN TO COMMAND</button>
+    </div>
+  </div>
+
+  <!-- OPERATIVE PROFILE MODAL -->
+  <div id="profile-modal" class="screen-layer hidden">
+    <div class="menu-card" style="max-width: 500px;">
+      <h2 style="color: #38bdf8; margin-bottom: 8px;">OPERATIVE PROFILE</h2>
+      <div style="font-size: 1.5rem; font-weight: bold; margin: 12px 0;">LEVEL 14 <span style="font-size: 0.9rem; color: #10b981;">(VANGUARD OPERATIVE)</span></div>
+      <div style="font-size: 0.85rem; color: #94a3b8; line-height: 1.8;">
+        <div>Matches Completed: <strong style="color: #f8fafc;">48</strong></div>
+        <div>Total Purged Mutants: <strong style="color: #f8fafc;">312</strong></div>
+        <div>Apex Bosses Defeated: <strong style="color: #f8fafc;">9</strong></div>
+        <div>Extraction Win Rate: <strong style="color: #10b981;">68%</strong></div>
+      </div>
+      <button class="menu-btn" style="margin-top: 20px;" onclick="document.getElementById('profile-modal').classList.add('hidden')">RETURN</button>
+    </div>
+  </div>
+
+  <!-- SETTINGS MODAL -->
+  <div id="settings-modal" class="screen-layer hidden">
+    <div class="menu-card" style="max-width: 500px; text-align: left;">
+      <h2 style="color: #38bdf8; margin-bottom: 16px;">SETTINGS & BINDS</h2>
+      <div style="font-size: 0.85rem; color: #cbd5e1; line-height: 2.0;">
+        <div>[W, A, S, D] — Tactical Movement</div>
+        <div>[Shift] — Sprint / Tactical Rush</div>
+        <div>[Left Click] — Primary Weapon Fire</div>
+        <div>[V] (Hold) — WebRTC 3D Proximity Voice</div>
+        <div>[F] — Flashlight Toggle</div>
+        <div>[N] — Night Vision Optics (NVG)</div>
+        <div>[H] — FLIR Thermal Heat Seeking</div>
+        <div>[G] — Hazmat Gas Mask Seal</div>
+        <div>[F3] — Toggle Net Telemetry HUD</div>
+      </div>
+      <button class="menu-btn" style="margin-top: 20px;" onclick="document.getElementById('settings-modal').classList.add('hidden')">SAVE & RETURN</button>
+    </div>
+  </div>
+
+  <!-- REAL-TIME NET ENGINE TELEMETRY OVERLAY (F3) -->
+  <div id="debug-telemetry-panel" class="hidden"></div>
+
+  <!-- Game Scripts -->
+  <script src="/shared/constants.js"></script>
+  <script src="src/voice_client.js"></script>
+  <script src="src/ui_controller.js"></script>
+  <script src="src/game_client.js"></script>
+</body>
+</html>
